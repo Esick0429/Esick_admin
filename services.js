@@ -54,14 +54,33 @@ exports.register = (req,res)=>{
 //查用户
 exports.select = (req,res)=>{
     let sql = 'select * from users';
-    db.base(sql,(err, rows)=> {
-        if(err){
-            res.json({err:"chucuole"})
-          }
-          else{
-            res.json({list:rows})
-          }
+    let time = parseInt(new Date().getTime()/1000)
+   
+    // console.log(time);
+    let usertoken = req.headers['authorization'];
+    if(!usertoken){
+        return res.json({status:501,msg:'没token'})
+    }
+    if(usertoken.indexOf('Bearer') >= 0){
+        usertoken = usertoken.split(' ')[1]
+        console.log(usertoken);
+        
+    }
+    token.verToken(usertoken).then(token =>{
+        db.base(sql,(err, rows)=> {
+            if(err){
+                res.json({err:"chucuole"})
+              }
+              else{
+                res.json({list:rows})
+              }
+        })
+    }).catch(err =>{
+        console.log(err)
+        res.json({status:401,msg:'token验证错误'})
     })
+
+
 }
 //删用户
 exports.delete = (req,res)=>{
