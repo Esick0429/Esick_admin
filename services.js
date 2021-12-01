@@ -9,23 +9,24 @@ exports.login = (req,res)=>{
     let password = req.body.password
     // 查询语句
     let sql ='select * from users where username = ?'
-    db.base(sql,username,(result)=>{
-        console.log(result.length)
-        if(!result.length){
-            return res.json({ status: 403, msg: '登录失败' })
-        }else{
-            // [ RowDataPacket { password: '123', username: 'admin', id: 1 } ]
-            // if(result[0].password==pwd){
-            //     return res.json({ status: 200, msg: '登录成功' ,username:req.body.username})
-            // }
-            // return res.json({ status: 1001, msg: '密码错误' })
-            token.setToken(username).then(token =>{
-                 if(result[0].password==password){
-                    return res.json({ status: 200, msg: '登录成功' ,username,token:token})
-                }
-                return res.json({ status: 1001, msg: '密码错误'});
-            })
-        }
+    token.setToken(username).then(token =>{
+        db.base(sql,username,(result)=>{
+            console.log(result)
+            if(!result.length){
+                return res.json({ status: 403, msg: '登录失败' })
+            }else{
+                // [ RowDataPacket { password: '123', username: 'admin', id: 1 } ]
+                // if(result[0].password==pwd){
+                //     return res.json({ status: 200, msg: '登录成功' ,username:req.body.username})
+                // }
+                // return res.json({ status: 1001, msg: '密码错误' })
+                
+                    if(result[0].password==password){
+                        return res.json({ status: 200, msg: '登录成功' ,username:result[0].password,token:token,authority:result[0].authority})
+                    }
+                    return res.json({ status: 1001, msg: '密码错误'});
+            }
+        })
     })
 }
 //注册
@@ -54,9 +55,7 @@ exports.register = (req,res)=>{
 //查用户
 exports.select = (req,res)=>{
     let sql = 'select * from users';
-    let time = parseInt(new Date().getTime()/1000)
-   
-    // console.log(time);
+    let findUserqx = 'select * from users where username = ?'
     let usertoken = req.headers['authorization'];
     if(!usertoken){
         return res.json({status:501,msg:'没token'})
@@ -67,13 +66,22 @@ exports.select = (req,res)=>{
         
     }
     token.verToken(usertoken).then(token =>{
-        db.base(sql,(err, rows)=> {
-            if(err){
-                res.json({err:"chucuole"})
-              }
-              else{
-                res.json({list:rows})
-              }
+        db.base(findUserqx,token.username,(result)=>{
+            console.log(result);
+            if(!result.length){
+                return res.json({status:401,msg:'账号异常，请咨询管理员'})
+            }else if(result[0].authority === 1){
+                db.base(sql,(err, rows)=> {
+                    if(err){
+                        res.json({err:"chucuole"})
+                      }
+                      else{
+                        res.json({list:rows})
+                      }
+                })
+            }else{
+                return res.json({status:403,msg:'无权限'})
+            }
         })
     }).catch(err =>{
         console.log(err)
