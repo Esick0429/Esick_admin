@@ -23,8 +23,8 @@ router.post('/api/setUserinfo',services.setUserinfo)
 
 router.get('/api/getSession',(req,res) =>{
   const code = req.query.code
-  const  appId = "wxecfcc10783d4d4fd"
-  const  appSecret="558dfba31a6027225c1bc3ac922f3176" 
+  const  appId = "111"
+  const  appSecret="111" 
 // if(!code){
 //     res.json({err:'没有code'})
 // }else{
