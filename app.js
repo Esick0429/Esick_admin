@@ -23,8 +23,7 @@ app.use('/api/*', function (req, res, next) {
 // express-jwt解析token，无token返回401给前端
 app.use(jwt({
     secret: 'mes_qdhd_mobile',  // 签名的密钥 或 PublicKey
-    algorithms: ['HS256'],
-    credentialsRequired: false //是否允许无token的请求
+    algorithms: ['HS256']
   }).unless({
     path: ['/api/login', '/api/register']  // 指定路径不经过 Token 解析
   }))

@@ -22,7 +22,7 @@ exports.login = (req,res)=>{
                 // return res.json({ status: 1001, msg: '密码错误' })
                 
                     if(result[0].password==password){
-                        return res.json({ status: 200, msg: '登录成功' ,username:result[0].password,token:token,authority:result[0].authority})
+                        return res.json({ status: 200, msg: '登录成功' ,username:result[0].username,token:token,authority:result[0].authority})
                     }
                     return res.json({ status: 1001, msg: '密码错误'});
             }
