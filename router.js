@@ -15,12 +15,7 @@ router.post('/api/select',services.select)
 router.post('/api/delete',services.delete)
 // 改用户
 router.post('/api/update',services.update)
-//查商品
-router.post('/api/selectGood',services.selectGood)
-// 存储用户信息
-router.post('/api/setUserinfo',services.setUserinfo)
 //获取用户信息
-
 router.get('/api/getSession',(req,res) =>{
   const code = req.query.code
   const  appId = "111"
@@ -37,5 +32,7 @@ router.get('/api/getSession',(req,res) =>{
 // }
 
 })
+//获取日记
+router.get('/api/getDiary',services.selectDiary)
 
 module.exports = router

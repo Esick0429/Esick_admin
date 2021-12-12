@@ -114,37 +114,28 @@ exports.update = (req,res)=>{
     db.base(update,updateMsg,(relust)=> {
         if(relust){
             console.log('修改成功',relust.message);
-             res.json({msg:'修改成功'})
+             res.json({status:200,msg:'修改成功'})
           }
           else{
-             res.json({msg:'修改失败'})
-          }
-    })
-}
-//查商品
-exports.selectGood = (req,res)=>{
-    let sql = 'select goodname,price,date,count from good';
-    db.base(sql,(err, rows)=> {
-        if(err){
-            res.json({err:"查不到啊"})
-          }
-          else{
-            res.json({list:rows})
+             res.json({status:401,msg:'修改失败'})
           }
     })
 }
 
-//存储用户信息
-exports.setUserinfo = (req,res)=>{
-    let userinfo = req.body.userinfo;
-    let setUserinfo = 'INSERT INTO userInfo set ?';
-    db.base(setUserinfo,userinfo,(relust)=> {
-        if(relust){
-            console.log('添加成功');
-             res.json({msg:'添加成功'})
-          }
-          else{
-             res.json({msg:'添加失败'})
-          }
+//查日记
+exports.selectDiary = (req,res) =>{
+    let sql  = `SELECT * FROM diary`
+    db.base(sql,(err,rows) => {
+        if(err){
+            res.json({status:200,err:"chucuole"})
+        }else{
+            let data = rows.map(item =>({
+                id:item.id,
+                date:item.date,
+                title:item.title,
+                content:item.content
+            }))
+            res.json({status:200,data})
+        }
     })
 }

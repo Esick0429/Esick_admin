@@ -29,7 +29,7 @@ app.use(jwt({
   }))
 app.use(function (err, req, res, next) {
     if (err.name === 'UnauthorizedError') {   
-        return res.json({ status: 401, msg: '令牌无效' })
+        return res.json({ status: 401, msg: '令牌无效',err})
     }
 })
 
