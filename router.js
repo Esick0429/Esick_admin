@@ -34,5 +34,11 @@ router.get('/api/getSession',(req,res) =>{
 })
 //获取日记
 router.get('/api/getDiary',services.selectDiary)
+//新增日记
+router.post('/api/addDiary',services.addtDiary)
+//修改日记
+router.post('/api/updateDiary',services.updateDiary)
+//删除日记
+router.delete('/api/deleteDiary',services.deleteDiary)
 
 module.exports = router

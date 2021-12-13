@@ -7,7 +7,7 @@ exports.setToken = function (username) {
         var token ='Bearer ' + jwt.sign({
             username: username
         }, signkey, {
-            expiresIn: 60 * 60 * 24 * 3 //表示3天后token过期
+            expiresIn: 60 * 60 //表示3天后token过期
         });
         resolve(token)
     })
