@@ -171,7 +171,7 @@ exports.update = (req, res) => {
       })
     } else {
       res.json({
-        status: 401,
+        status: 200,
         msg: '修改失败',
       })
     }
@@ -191,7 +191,7 @@ exports.selectDiary = (req, res) => {
     console.log(token)
     let userName = token.username
     let count
-    let sql = `SELECT * FROM diary WHERE userName = ? limit ${currentPage},${pageSize}`
+    let sql = `SELECT * FROM diary WHERE userName = ? order by date Desc limit ${currentPage},${pageSize}`
     let sqlcount = `SELECT COUNT(*) as count FROM diary WHERE userName = ?`
     await db.base(sqlcount, userName, (result) => {
       count = result[0].count
@@ -276,7 +276,7 @@ exports.updateDiary = (req, res) => {
       })
     } else {
       res.json({
-        status: 401,
+        status: 200,
         msg: '修改失败',
       })
     }
