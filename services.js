@@ -189,19 +189,20 @@ exports.selectDiary = (req, res) => {
   }
   token.verToken(usertoken).then(async (token) => {
     console.log(token)
-    let userName = token.username
+    // let userName = token.username
     let count
-    let sql = `SELECT * FROM diary WHERE userName = ? order by date Desc limit ${currentPage},${pageSize}`
-    let sqlcount = `SELECT COUNT(*) as count FROM diary WHERE userName = ?`
-    await db.base(sqlcount, userName, (result) => {
+    let sql = `SELECT * FROM diary order by date Desc limit ${currentPage},${pageSize}`
+    let sqlcount = `SELECT COUNT(*) as count FROM diary`
+    await db.base(sqlcount, (err,result) => {
       count = result[0].count
-      db.base(sql, userName, (result, err) => {
+      db.base(sql, (err, result) => {
         if (result) {
           let data = result.map((item) => ({
             id: item.id,
             date: item.date,
             title: item.title,
             content: item.content,
+            userName:item.userName
           }))
           res.json({
             status: 200,
@@ -286,26 +287,36 @@ exports.updateDiary = (req, res) => {
 //删日记
 exports.deleteDiary = (req, res) => {
   let id = req.query.id
+  let userName = req.query.userName
   let usertoken = req.headers['authorization']
   if (usertoken.indexOf('Bearer') >= 0) {
     usertoken = usertoken.split(' ')[1]
   }
   token.verToken(usertoken).then((token) => {
     console.log(token)
-    let userName = token.username
+    let tokenName = token.username
+    let sql = `select * from users where username = ?`
     let del = 'delete from diary where id = ? and userName = ?'
-    db.base(del, [id, userName], (relust) => {
-      if (relust.affectedRows === 1) {
-        res.json({
-          msg: '删除成功',
-          status: 200,
+    db.base(sql,tokenName,(relust)=>{
+      if(relust[0].authority === 1){
+        db.base(del, [id, userName], (data) => {
+          console.log(data)
+          if (data.affectedRows === 1) {
+            res.json({
+              msg: '删除成功',
+              status: 200,
+            })
+          } else {
+            res.json({
+              status: 200,
+              msg: '删除失败,已删除或条件错误',
+            })
+          }
         })
-      } else {
-        res.json({
-          status: 200,
-          msg: '删除失败,已删除或条件错误',
-        })
+      }else{
+        res.json({status:403,msg:'权限不足'})
       }
     })
+    
   })
 }
