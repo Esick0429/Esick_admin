@@ -1,83 +1,65 @@
 const db = require('./db.js')
 const token = require('./token')
-
-exports.start = (req, res) => {}
 // 登录注册处理
 exports.login = (req, res) => {
   let username = req.body.username
   let password = req.body.password
   // 查询语句
   let sql = 'select * from users where username = ?'
-  token.setToken(username).then((token) => {
-    db.base(sql, username, (result) => {
-      console.log(result)
-      if (!result.length) {
+  token.setToken(username).then(async (token) => {
+    let { results } = await db.base(sql, username)
+    if (!results.length) {
+      return res.json({
+        status: 403,
+        msg: '登录失败',
+      })
+    } else {
+      if (results[0].password === password) {
         return res.json({
-          status: 403,
-          msg: '登录失败',
-        })
-      } else {
-        // [ RowDataPacket { password: '123', username: 'admin', id: 1 } ]
-        // if(result[0].password==pwd){
-        //     return res.json({ status: 200, msg: '登录成功' ,username:req.body.username})
-        // }
-        // return res.json({ status: 1001, msg: '密码错误' })
-
-        if (result[0].password === password) {
-          return res.json({
-            status: 200,
-            msg: '登录成功',
-            username: result[0].username,
-            token: token,
-            authority: result[0].authority,
-          })
-        }
-        return res.json({
-          status: 1001,
-          msg: '密码错误',
+          status: 200,
+          msg: '登录成功',
+          username: results[0].username,
+          token: token,
+          authority: results[0].authority,
         })
       }
-    })
+      return res.json({
+        status: 1001,
+        msg: '密码错误',
+      })
+    }
   })
 }
 //注册
-exports.register = (req, res) => {
+exports.register = async (req, res) => {
   let username = req.body.username
   let password = req.body.password
   // 查询语句
   let sql = 'select * from users where username = ?'
   // 插入语句
   let insert = 'insert into users set ?'
-  db.base(sql, username, (result) => {
-    console.log(result.length)
-    if (result.length !== 0) {
+  let { results } = await db.base(sql, username)
+  if (results.length !== 0) {
+    return res.json({
+      status: 1,
+      msg: '该用户名已经存在',
+    })
+  } else {
+    let { results } = await db.base(insert, {
+      username,
+      password,
+    })
+    if (results.affectedRows === 1) {
       return res.json({
-        status: 1,
-        msg: '该用户名已经存在',
+        status: 200,
+        msg: '注册成功',
       })
-    } else {
-      db.base(
-        insert,
-        {
-          username,
-          password,
-        },
-        (result) => {
-          console.log(result)
-          if (result.affectedRows === 1) {
-            return res.json({
-              status: 200,
-              msg: '注册成功',
-            })
-          }
-          return res.json({
-            status: 1,
-            msg: '注册失败',
-          })
-        }
-      )
     }
-  })
+    return res.json({
+      status: 1,
+      msg: '注册失败',
+    })
+  }
 }
 //查用户
 exports.select = (req, res) => {
@@ -92,37 +74,30 @@ exports.select = (req, res) => {
   }
   if (usertoken.indexOf('Bearer') >= 0) {
     usertoken = usertoken.split(' ')[1]
-    console.log(usertoken)
   }
   token
     .verToken(usertoken)
-    .then((token) => {
-      db.base(findUserqx, token.username, (result) => {
-        console.log(result)
-        if (!result.length) {
-          return res.json({
-            status: 401,
-            msg: '账号异常，请咨询管理员',
-          })
-        } else if (result[0].authority === 1) {
-          db.base(sql, (err, rows) => {
-            if (err) {
-              res.json({
-                err: 'chucuole',
-              })
-            } else {
-              res.json({
-                list: rows,
-              })
-            }
-          })
-        } else {
-          return res.json({
-            status: 403,
-            msg: '无权限',
+    .then(async (token) => {
+      let { results } = await db.base(findUserqx, token.username)
+      console.log(results)
+      if (!results.length) {
+        return res.json({
+          status: 401,
+          msg: '账号异常，请咨询管理员',
+        })
+      } else if (results[0].authority === 1) {
+        let userList = await db.base(sql)
+        if (userList) {
+          res.json({
+            list: userList.results,
           })
         }
-      })
+      } else {
+        return res.json({
+          status: 403,
+          msg: '无权限',
+        })
+      }
     })
     .catch((err) => {
       console.log(err)
@@ -133,24 +108,32 @@ exports.select = (req, res) => {
     })
 }
 //删用户
-exports.delete = (req, res) => {
+exports.delete = async (req, res) => {
   let id = req.body.id
   let del = 'delete from users where id = ?'
-  db.base(del, id, (relust) => {
-    if (relust) {
-      console.log('删除成功', relust.message)
-      res.json({
-        msg: '删除成功',
-      })
-    } else {
-      res.json({
-        msg: '删除失败',
-      })
-    }
-  })
+  let usertoken = req.headers['authorization']
+  let Auth = await selectAuth(usertoken)
+  if (!Auth) {
+    return res.json({
+      status: 403,
+      msg: '权限不足',
+    })
+  }
+  let { results } = await db.base(del, id)
+  if (results.affectedRows === 1) {
+    res.json({
+      status: 200,
+      msg: '删除成功',
+    })
+  } else {
+    res.json({
+      status: 501,
+      msg: '删除失败',
+    })
+  }
 }
 //改用户
-exports.update = (req, res) => {
+exports.update = async (req, res) => {
   let id = req.body.id
   let username = req.body.username
   let password = req.body.password
@@ -162,99 +145,87 @@ exports.update = (req, res) => {
     },
     id,
   ]
-  db.base(update, updateMsg, (relust) => {
-    if (relust) {
-      console.log('修改成功', relust.message)
-      res.json({
-        status: 200,
-        msg: '修改成功',
-      })
-    } else {
-      res.json({
-        status: 200,
-        msg: '修改失败',
-      })
-    }
-  })
+  let Auth = await selectAuth(req.headers.authorization)
+  if (!Auth) {
+    return res.json({
+      status: 403,
+      msg: '权限不足',
+    })
+  }
+  let { results } = await db.base(update, updateMsg)
+  if (results.affectedRows === 1) {
+    res.json({
+      status: 200,
+      msg: '修改成功',
+    })
+  } else {
+    res.json({
+      status: 200,
+      msg: '修改失败',
+    })
+  }
 }
 
 //查日记
-exports.selectDiary = (req, res) => {
+exports.selectDiary = async (req, res) => {
   let pageIndex = req.query.pageIndex || 1
   let pageSize = req.query.pageSize || 10
   let currentPage = (pageIndex - 1) * pageSize
-  let usertoken = req.headers['authorization']
-  if (usertoken.indexOf('Bearer') >= 0) {
-    usertoken = usertoken.split(' ')[1]
-  }
-  token.verToken(usertoken).then(async (token) => {
-    console.log(token)
-    // let userName = token.username
-    let count
-    let sql = `SELECT * FROM diary order by date Desc limit ${currentPage},${pageSize}`
-    let sqlcount = `SELECT COUNT(*) as count FROM diary`
-    await db.base(sqlcount, (err,result) => {
-      count = result[0].count
-      db.base(sql, (err, result) => {
-        if (result) {
-          let data = result.map((item) => ({
-            id: item.id,
-            date: item.date,
-            title: item.title,
-            content: item.content,
-            userName:item.userName
-          }))
-          res.json({
-            status: 200,
-            total: count,
-            data,
-          })
-        } else {
-          res.json({
-            status: 200,
-            err,
-          })
-        }
-      })
+  let sql = `SELECT * FROM diary order by date Desc limit ${currentPage},${pageSize}`
+  let sqlcount = `SELECT COUNT(*) as count FROM diary`
+  let diaryCount = await db.base(sqlcount)
+  let { results } = await db.base(sql)
+  if (results) {
+    let data = results.map((item) => ({
+      id: item.id,
+      date: item.date,
+      title: item.title,
+      content: item.content,
+      userName: item.userName,
+    }))
+    res.json({
+      status: 200,
+      total: diaryCount.results[0].count,
+      data,
     })
-  })
+  } else {
+    res.json({
+      status: 200,
+      err,
+    })
+  }
 }
 
 //增日记
-exports.addtDiary = (req, res) => {
+exports.addtDiary = async (req, res) => {
   let userName = req.body.userName
   let title = req.body.title
   let content = req.body.content
   let date = new Date().getTime()
   let create_time = new Date().getTime()
   let sql = `insert into diary set ? `
-  db.base(
-    sql,
-    {
-      userName,
-      title,
-      content,
-      date,
-      create_time,
-    },
-    (result, err) => {
-      if (result.affectedRows === 1) {
-        return res.json({
-          status: 200,
-          msg: '新增成功',
-        })
-      }
-      return res.json({
-        status: 1,
-        msg: '新增失败',
-        err,
-      })
-    }
-  )
+  let { results } = await db.base(sql, {
+    userName,
+    title,
+    content,
+    date,
+    create_time,
+  })
+  if (results.affectedRows === 1) {
+    return res.json({
+      status: 200,
+      msg: '新增成功',
+    })
+  }
+  return res.json({
+    status: 1,
+    msg: '新增失败',
+    err,
+  })
 }
 
 //改日记
-exports.updateDiary = (req, res) => {
+exports.updateDiary = async (req, res) => {
   let id = req.body.id
   let userName = req.body.userName
   let title = req.body.title
@@ -268,55 +239,58 @@ exports.updateDiary = (req, res) => {
     id,
     userName,
   ]
-  db.base(update, updateMsg, (relust) => {
-    if (relust) {
-      console.log('修改成功', relust.message)
-      res.json({
-        status: 200,
-        msg: '修改成功',
-      })
-    } else {
-      res.json({
-        status: 200,
-        msg: '修改失败',
-      })
-    }
-  })
+  let { results } = await db.base(update, updateMsg)
+  console.log(results)
+  if (results.affectedRows === 1) {
+    res.json({
+      status: 200,
+      msg: '修改成功',
+    })
+  } else {
+    res.json({
+      status: 200,
+      msg: '修改失败',
+    })
+  }
 }
 
 //删日记
-exports.deleteDiary = (req, res) => {
+exports.deleteDiary = async (req, res) => {
   let id = req.query.id
   let userName = req.query.userName
   let usertoken = req.headers['authorization']
+  let Auth = selectAuth(usertoken)
+  let sql = `select * from users where username = ?`
+  let del = 'delete from diary where id = ? and userName = ?'
+  if (!Auth) {
+    return res.json({
+      status: 403,
+      msg: '权限不足',
+    })
+  }
+  let { results } = await db.base(del, [id, userName])
+  console.log(results);
+  if (results.affectedRows === 1) {
+    res.json({
+      msg: '删除成功',
+      status: 200,
+    })
+  } else {
+    res.json({
+      status: 200,
+      msg: '删除失败,已删除或条件错误',
+    })
+  }
+}
+
+let selectAuth = async function (usertoken) {
+  let sql = `select * from users where username = ?`
   if (usertoken.indexOf('Bearer') >= 0) {
     usertoken = usertoken.split(' ')[1]
   }
-  token.verToken(usertoken).then((token) => {
-    console.log(token)
-    let tokenName = token.username
-    let sql = `select * from users where username = ?`
-    let del = 'delete from diary where id = ? and userName = ?'
-    db.base(sql,tokenName,(relust)=>{
-      if(relust[0].authority === 1){
-        db.base(del, [id, userName], (data) => {
-          console.log(data)
-          if (data.affectedRows === 1) {
-            res.json({
-              msg: '删除成功',
-              status: 200,
-            })
-          } else {
-            res.json({
-              status: 200,
-              msg: '删除失败,已删除或条件错误',
-            })
-          }
-        })
-      }else{
-        res.json({status:403,msg:'权限不足'})
-      }
-    })
-    
-  })
+  let userInfo = await token.verToken(usertoken)
+  if (userInfo) {
+    let { results } = await db.base(sql, userInfo.username)
+    return results[0].authority
+  }
 }
