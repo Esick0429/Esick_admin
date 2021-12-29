@@ -171,9 +171,19 @@ exports.selectDiary = async (req, res) => {
   let pageIndex = req.query.pageIndex || 1
   let pageSize = req.query.pageSize || 10
   let currentPage = (pageIndex - 1) * pageSize
-  let sql = `SELECT * FROM diary order by date Desc limit ${currentPage},${pageSize}`
+  let startTime = req.query.startTime
+  let endTime = req.query.endTime
+  let sql = `SELECT * FROM diary`
   let sqlcount = `SELECT COUNT(*) as count FROM diary`
+  if(startTime!== '0' && endTime!== '0'){
+    sql += ` where date between '${startTime}' and '${endTime}' order by date Desc limit ${currentPage},${pageSize} `
+    sqlcount += ` where date between '${startTime}' and '${endTime}'`
+  }else{
+    sql += ` order by date Desc limit ${currentPage},${pageSize}`
+  }
   let diaryCount = await db.base(sqlcount)
+  console.log(sql);
+  console.log(sqlcount);
   let { results } = await db.base(sql)
   if (results) {
     let data = results.map((item) => ({
@@ -259,8 +269,7 @@ exports.deleteDiary = async (req, res) => {
   let id = req.query.id
   let userName = req.query.userName
   let usertoken = req.headers['authorization']
-  let Auth = selectAuth(usertoken)
-  let sql = `select * from users where username = ?`
+  let Auth = await selectAuth(usertoken)
   let del = 'delete from diary where id = ? and userName = ?'
   if (!Auth) {
     return res.json({
@@ -269,7 +278,6 @@ exports.deleteDiary = async (req, res) => {
     })
   }
   let { results } = await db.base(del, [id, userName])
-  console.log(results);
   if (results.affectedRows === 1) {
     res.json({
       msg: '删除成功',
@@ -291,6 +299,7 @@ let selectAuth = async function (usertoken) {
   let userInfo = await token.verToken(usertoken)
   if (userInfo) {
     let { results } = await db.base(sql, userInfo.username)
-    return results[0].authority
+    console.log(results);
+    return results[0].username === 'admin' ? true : false
   }
 }
