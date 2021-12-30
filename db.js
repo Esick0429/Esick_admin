@@ -19,6 +19,7 @@ exports.base = function (sql, values) {
       } else {
         //console.log("数据库连接成功");
         connection.query(sql, values, (err, results) => {
+          console.log(sql,values);
           if (err) {
             reject(err);
             resolve({

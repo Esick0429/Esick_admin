@@ -3,6 +3,7 @@ const router = express.Router()
 const services = require('./services.js')
 const jtw = require('jsonwebtoken')
 const request = require('request');
+const upload = require('./upload')
 
 // router.get('/',services.start)
 // 登录功能
@@ -10,7 +11,9 @@ router.post('/api/login',services.login)
 // 注册功能
 router.post('/api/register',services.register)
 //查用户
-router.post('/api/select',services.select)
+router.get('/api/select',services.select)
+//查用户信息
+router.get('/api/getUserInfo',services.getUserInfo)
 //删用户
 router.post('/api/delete',services.delete)
 // 改用户
@@ -25,4 +28,7 @@ router.post('/api/updateDiary',services.updateDiary)
 //删除日记
 router.delete('/api/deleteDiary',services.deleteDiary)
 
+
+//上传头像
+router.post('/api/uploadImg',upload.single('avatar'),services.uploadImg)
 module.exports = router

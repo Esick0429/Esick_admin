@@ -1,5 +1,6 @@
 const db = require('./db.js')
 const token = require('./token')
+const url = ''
 // 登录注册处理
 exports.login = (req, res) => {
   let username = req.body.username
@@ -18,9 +19,7 @@ exports.login = (req, res) => {
         return res.json({
           status: 200,
           msg: '登录成功',
-          username: results[0].username,
-          token: token,
-          authority: results[0].authority,
+          token: token
         })
       }
       return res.json({
@@ -62,50 +61,33 @@ exports.register = async (req, res) => {
   }
 }
 //查用户
-exports.select = (req, res) => {
+exports.select = async (req, res) => {
   let sql = 'select * from users'
-  let findUserqx = 'select * from users where username = ?'
   let usertoken = req.headers['authorization']
-  if (!usertoken) {
+  let Auth = await selectAuth(usertoken)
+  if (!Auth) {
     return res.json({
-      status: 501,
-      msg: '没token',
+      status: 403,
+      msg: '权限不足',
     })
   }
+  let userList = await db.base(sql)
+  if (userList) {
+    res.json({
+      list: userList.results,
+    })
+  }
+}
+//获取用户信息
+exports.getUserInfo = async (req,res)=>{
+  let usertoken = req.headers['authorization']
+  let sql = `select * from users where username = ?`
   if (usertoken.indexOf('Bearer') >= 0) {
     usertoken = usertoken.split(' ')[1]
   }
-  token
-    .verToken(usertoken)
-    .then(async (token) => {
-      let { results } = await db.base(findUserqx, token.username)
-      console.log(results)
-      if (!results.length) {
-        return res.json({
-          status: 401,
-          msg: '账号异常，请咨询管理员',
-        })
-      } else if (results[0].authority === 1) {
-        let userList = await db.base(sql)
-        if (userList) {
-          res.json({
-            list: userList.results,
-          })
-        }
-      } else {
-        return res.json({
-          status: 403,
-          msg: '无权限',
-        })
-      }
-    })
-    .catch((err) => {
-      console.log(err)
-      res.json({
-        status: 401,
-        msg: 'token验证错误',
-      })
-    })
+  let userInfo = await token.verToken(usertoken)
+  let {results} = await db.base(sql,userInfo.username)
+  res.json(results[0])
 }
 //删用户
 exports.delete = async (req, res) => {
@@ -137,13 +119,14 @@ exports.update = async (req, res) => {
   let id = req.body.id
   let username = req.body.username
   let password = req.body.password
-  let update = 'update users set ? where id = ? '
+  let update = 'update users set ? where id = ? and username  = ?'
   let updateMsg = [
     {
       username,
       password,
     },
     id,
+    username
   ]
   let Auth = await selectAuth(req.headers.authorization)
   if (!Auth) {
@@ -153,14 +136,15 @@ exports.update = async (req, res) => {
     })
   }
   let { results } = await db.base(update, updateMsg)
-  if (results.affectedRows === 1) {
+  console.log(results);
+  if (results.changedRows === 1) {
     res.json({
       status: 200,
       msg: '修改成功',
     })
-  } else {
+  } else{
     res.json({
-      status: 200,
+      status: 500,
       msg: '修改失败',
     })
   }
@@ -299,7 +283,30 @@ let selectAuth = async function (usertoken) {
   let userInfo = await token.verToken(usertoken)
   if (userInfo) {
     let { results } = await db.base(sql, userInfo.username)
-    console.log(results);
+    console.log(results,'????');
     return results[0].username === 'admin' ? true : false
+  }
+}
+
+
+exports.uploadImg = async (req, res) => {
+  console.log(req.file);
+  let id = req.body.id
+  let username = req.body.username
+  let avatarUrl ="http://localhost:4000/"+req.file.filename
+  let update = 'update users set ? where id =? and username = ?'
+  let updateMsg = [
+    {
+      avatarUrl
+    },
+    id,
+    username
+  ]
+  let {results} = await db.base(update,updateMsg)
+  if(results.affectedRows === 1){
+    res.json({
+      status:200,
+      msg:'上传成功'
+    })
   }
 }

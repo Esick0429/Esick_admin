@@ -20,6 +20,8 @@ app.use('/api/*', function (req, res, next) {
     next();
 });
 
+//配置静态文件夹
+app.use(express.static('Images'));
 // express-jwt解析token，无token返回401给前端
 app.use(jwt({
     secret: 'mes_qdhd_mobile',  // 签名的密钥 或 PublicKey
