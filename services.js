@@ -1,6 +1,7 @@
 const db = require('./db.js')
 const token = require('./token')
-const url = ''
+const fs = require('fs')
+const path = require('path')
 // 登录注册处理
 exports.login = (req, res) => {
   let username = req.body.username
@@ -19,7 +20,7 @@ exports.login = (req, res) => {
         return res.json({
           status: 200,
           msg: '登录成功',
-          token: token
+          token: token,
         })
       }
       return res.json({
@@ -79,14 +80,14 @@ exports.select = async (req, res) => {
   }
 }
 //获取用户信息
-exports.getUserInfo = async (req,res)=>{
+exports.getUserInfo = async (req, res) => {
   let usertoken = req.headers['authorization']
   let sql = `select * from users where username = ?`
   if (usertoken.indexOf('Bearer') >= 0) {
     usertoken = usertoken.split(' ')[1]
   }
   let userInfo = await token.verToken(usertoken)
-  let {results} = await db.base(sql,userInfo.username)
+  let { results } = await db.base(sql, userInfo.username)
   res.json(results[0])
 }
 //删用户
@@ -126,7 +127,7 @@ exports.update = async (req, res) => {
       password,
     },
     id,
-    username
+    username,
   ]
   let Auth = await selectAuth(req.headers.authorization)
   if (!Auth) {
@@ -136,13 +137,13 @@ exports.update = async (req, res) => {
     })
   }
   let { results } = await db.base(update, updateMsg)
-  console.log(results);
+  console.log(results)
   if (results.changedRows === 1) {
     res.json({
       status: 200,
       msg: '修改成功',
     })
-  } else{
+  } else {
     res.json({
       status: 500,
       msg: '修改失败',
@@ -159,15 +160,13 @@ exports.selectDiary = async (req, res) => {
   let endTime = req.query.endTime
   let sql = `SELECT * FROM diary`
   let sqlcount = `SELECT COUNT(*) as count FROM diary`
-  if(startTime!== '0' && endTime!== '0'){
+  if (startTime !== '0' && endTime !== '0') {
     sql += ` where date between '${startTime}' and '${endTime}' order by date Desc limit ${currentPage},${pageSize} `
     sqlcount += ` where date between '${startTime}' and '${endTime}'`
-  }else{
+  } else {
     sql += ` order by date Desc limit ${currentPage},${pageSize}`
   }
   let diaryCount = await db.base(sqlcount)
-  console.log(sql);
-  console.log(sqlcount);
   let { results } = await db.base(sql)
   if (results) {
     let data = results.map((item) => ({
@@ -234,7 +233,7 @@ exports.updateDiary = async (req, res) => {
     userName,
   ]
   let { results } = await db.base(update, updateMsg)
-  console.log(results)
+
   if (results.affectedRows === 1) {
     res.json({
       status: 200,
@@ -283,30 +282,90 @@ let selectAuth = async function (usertoken) {
   let userInfo = await token.verToken(usertoken)
   if (userInfo) {
     let { results } = await db.base(sql, userInfo.username)
-    console.log(results,'????');
     return results[0].username === 'admin' ? true : false
   }
 }
 
-
 exports.uploadImg = async (req, res) => {
-  console.log(req.file);
+  console.log(req.file)
   let id = req.body.id
   let username = req.body.username
-  let avatarUrl ="http://localhost:4000/"+req.file.filename
-  let update = 'update users set ? where id =? and username = ?'
-  let updateMsg = [
-    {
-      avatarUrl
-    },
-    id,
-    username
-  ]
-  let {results} = await db.base(update,updateMsg)
-  if(results.affectedRows === 1){
+  let avatarUrl = 'http://localhost:4000/' + req.file.filename
+  const insertImg = 'insert into gallery set ?'
+  if (id && username) {
+    let update = 'update users set ? where id =? and username = ?'
+    let updateMsg = [
+      {
+        avatarUrl,
+      },
+      id,
+      username,
+    ]
+    let { results } = await db.base(update, updateMsg)
+  }
+  let data = await db.base(insertImg, {
+    imgName: req.file.filename,
+    imgUrl: `/${req.file.filename}`,
+  })
+  if (data.results.affectedRows === 1) {
     res.json({
-      status:200,
-      msg:'上传成功'
+      status: 200,
+      msg: '上传成功',
     })
+  }
+}
+
+exports.getImgs = async (req, res) => {
+  const selectImgs = `select * from gallery`
+  let { results } = await db.base(selectImgs)
+  res.json({
+    status: 200,
+    data: {
+      list: results,
+    },
+  })
+}
+
+exports.deleteImgs = async (req, res) => {
+  let id = req.query.id
+  let imgName = req.query.imgName
+  let sqlImg = `select * from gallery where id = '${id}' and imgName = '${imgName}'`
+  let { results } = await db.base(sqlImg)
+  let imgUrl = `./Images`
+  if (results.length === 1) {
+    const deletImgSql = `delete from gallery where id = '${id}' and imgName = '${imgName}'`
+    let deleteData = await db.base(deletImgSql)
+    if (deleteData.results.affectedRows === 1) {
+      deleteFolderRecursive(imgUrl, imgName)
+      res.json({ status: 200, msg: '删除成功' })
+    } else {
+      res.json({ status: 503, msg: '删除失败' })
+    }
+  } else {
+    res.json({ status: 503, msg: '删除失败' })
+  }
+}
+
+function deleteFolderRecursive(url, name) {
+  var files = []
+  if (fs.existsSync(url)) {
+    //判断给定的路径是否存在
+    files = fs.readdirSync(url) //返回文件和子目录的数组
+    console.log(files)
+    files.forEach(function (file, index) {
+      var curPath = path.join(url, file)
+      if (fs.statSync(curPath).isDirectory()) {
+        //同步读取文件夹文件，如果是文件夹，则函数回调
+        deleteFile(curPath, name)
+      } else {
+        if (file.indexOf(name) > -1) {
+          //是指定文件，则删除
+          fs.unlinkSync(curPath)
+          console.log('删除文件：' + curPath)
+        }
+      }
+    })
+  } else {
+    console.log('给定的路径不存在！')
   }
 }

@@ -31,4 +31,8 @@ router.delete('/api/deleteDiary',services.deleteDiary)
 
 //上传头像
 router.post('/api/uploadImg',upload.single('avatar'),services.uploadImg)
+//获取头像
+router.get('/api/getImgs',services.getImgs)
+//删除头像
+router.delete('/api/deleteImgs',services.deleteImgs)
 module.exports = router
