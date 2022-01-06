@@ -287,10 +287,13 @@ let selectAuth = async function (usertoken) {
 }
 
 exports.uploadImg = async (req, res) => {
-  console.log(req.file)
+  console.log(req.headers.host)
+  if(req.file.mimetype.split('/')[0] !== 'image'){
+    return res.json({status:700,msg:'上传文件格式错误'})
+  }
   let id = req.body.id
   let username = req.body.username
-  let avatarUrl = 'http://localhost:4000/' + req.file.filename
+  let avatarUrl = `http://${req.headers.host}/images/${req.file.filename}`
   const insertImg = 'insert into gallery set ?'
   if (id && username) {
     let update = 'update users set ? where id =? and username = ?'
@@ -305,7 +308,8 @@ exports.uploadImg = async (req, res) => {
   }
   let data = await db.base(insertImg, {
     imgName: req.file.filename,
-    imgUrl: `/${req.file.filename}`,
+    imgUrl: `/images/${req.file.filename}`,
+    upload_time:new Date().getTime()
   })
   if (data.results.affectedRows === 1) {
     res.json({
@@ -318,6 +322,9 @@ exports.uploadImg = async (req, res) => {
 exports.getImgs = async (req, res) => {
   const selectImgs = `select * from gallery`
   let { results } = await db.base(selectImgs)
+  for(let i of results){
+    i.imgUrl = `http://${req.headers.host}${i.imgUrl}`
+  }
   res.json({
     status: 200,
     data: {
@@ -331,7 +338,7 @@ exports.deleteImgs = async (req, res) => {
   let imgName = req.query.imgName
   let sqlImg = `select * from gallery where id = '${id}' and imgName = '${imgName}'`
   let { results } = await db.base(sqlImg)
-  let imgUrl = `./Images`
+  let imgUrl = `./public/images`
   if (results.length === 1) {
     const deletImgSql = `delete from gallery where id = '${id}' and imgName = '${imgName}'`
     let deleteData = await db.base(deletImgSql)

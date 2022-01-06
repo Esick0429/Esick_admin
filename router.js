@@ -30,7 +30,7 @@ router.delete('/api/deleteDiary',services.deleteDiary)
 
 
 //上传头像
-router.post('/api/uploadImg',upload.single('avatar'),services.uploadImg)
+router.post('/api/uploadImg',upload.single('image'),services.uploadImg)
 //获取头像
 router.get('/api/getImgs',services.getImgs)
 //删除头像
