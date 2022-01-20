@@ -175,6 +175,7 @@ exports.selectDiary = async (req, res) => {
       title: item.title,
       content: item.content,
       userName: item.userName,
+      updateTime: item.update_time
     }))
     res.json({
       status: 200,
@@ -202,7 +203,7 @@ exports.addtDiary = async (req, res) => {
     title,
     content,
     date,
-    create_time,
+    create_time
   })
   if (results.affectedRows === 1) {
     return res.json({
@@ -223,11 +224,21 @@ exports.updateDiary = async (req, res) => {
   let userName = req.body.userName
   let title = req.body.title
   let content = req.body.content
+  let usertoken = req.headers['authorization']
+  let Auth = await selectAuth(usertoken)
+  let del = 'delete from diary where id = ? and userName = ?'
+  if (!Auth) {
+    return res.json({
+      status: 403,
+      msg: '权限不足',
+    })
+  }
   let update = 'update diary set ? where id =? and userName = ?'
   let updateMsg = [
     {
       title,
       content,
+      update_time:new Date().getTime()
     },
     id,
     userName,
@@ -293,7 +304,7 @@ exports.uploadImg = async (req, res) => {
   }
   let id = req.body.id
   let username = req.body.username
-  let avatarUrl = `http://${req.headers.host}/images/${req.file.filename}`
+  let avatarUrl = `https://${req.headers.host}/images/${req.file.filename}`
   const insertImg = 'insert into gallery set ?'
   if (id && username) {
     let update = 'update users set ? where id =? and username = ?'
@@ -320,10 +331,10 @@ exports.uploadImg = async (req, res) => {
 }
 
 exports.getImgs = async (req, res) => {
-  const selectImgs = `select * from gallery`
+  const selectImgs = `select * from gallery order by upload_time Desc`
   let { results } = await db.base(selectImgs)
   for(let i of results){
-    i.imgUrl = `http://${req.headers.host}${i.imgUrl}`
+    i.imgUrl = `https://${req.headers.host}${i.imgUrl}`
   }
   res.json({
     status: 200,
