@@ -1,6 +1,6 @@
 const mysqlDb = require("mysql");
 let options = {
-  host: "esick.xyz",
+  host: "119.91.27.40",
   user: "users",
   password: "123",
   database: "users",

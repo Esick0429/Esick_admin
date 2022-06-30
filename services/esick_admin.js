@@ -1,7 +1,12 @@
-const db = require('./db.js')
-const token = require('./token')
+const db = require('../db/mysql_db.js')
+const token = require('../token')
 const fs = require('fs')
 const path = require('path')
+const mongodb = require('../db/mongo_db')
+const ObjectId = require('mongodb').ObjectId
+// const blogItem = require('./db/schema/blogItem')
+// const TagGroup = require('../db/schema/tagGroup')
+// const Archives = require('../db/schema/archive')
 // 登录注册处理
 exports.login = (req, res) => {
   let username = req.body.username
@@ -175,7 +180,7 @@ exports.selectDiary = async (req, res) => {
       title: item.title,
       content: item.content,
       userName: item.userName,
-      updateTime: item.update_time
+      updateTime: item.update_time,
     }))
     res.json({
       status: 200,
@@ -203,7 +208,7 @@ exports.addtDiary = async (req, res) => {
     title,
     content,
     date,
-    create_time
+    create_time,
   })
   if (results.affectedRows === 1) {
     return res.json({
@@ -238,7 +243,7 @@ exports.updateDiary = async (req, res) => {
     {
       title,
       content,
-      update_time:new Date().getTime()
+      update_time: new Date().getTime(),
     },
     id,
     userName,
@@ -285,6 +290,7 @@ exports.deleteDiary = async (req, res) => {
   }
 }
 
+//查询权限
 let selectAuth = async function (usertoken) {
   let sql = `select * from users where username = ?`
   if (usertoken.indexOf('Bearer') >= 0) {
@@ -296,11 +302,11 @@ let selectAuth = async function (usertoken) {
     return results[0].username === 'admin' ? true : false
   }
 }
-
+//上传图片
 exports.uploadImg = async (req, res) => {
   console.log(req.headers.host)
-  if(req.file.mimetype.split('/')[0] !== 'image'){
-    return res.json({status:700,msg:'上传文件格式错误'})
+  if (req.file.mimetype.split('/')[0] !== 'image') {
+    return res.json({ status: 700, msg: '上传文件格式错误' })
   }
   let id = req.body.id
   let username = req.body.username
@@ -320,7 +326,7 @@ exports.uploadImg = async (req, res) => {
   let data = await db.base(insertImg, {
     imgName: req.file.filename,
     imgUrl: `/images/${req.file.filename}`,
-    upload_time:new Date().getTime()
+    upload_time: new Date().getTime(),
   })
   if (data.results.affectedRows === 1) {
     res.json({
@@ -329,11 +335,11 @@ exports.uploadImg = async (req, res) => {
     })
   }
 }
-
+//获取图片
 exports.getImgs = async (req, res) => {
   const selectImgs = `select * from gallery order by upload_time Desc`
   let { results } = await db.base(selectImgs)
-  for(let i of results){
+  for (let i of results) {
     i.imgUrl = `https://${req.headers.host}${i.imgUrl}`
   }
   res.json({
@@ -343,7 +349,7 @@ exports.getImgs = async (req, res) => {
     },
   })
 }
-
+//删除图片
 exports.deleteImgs = async (req, res) => {
   let id = req.query.id
   let imgName = req.query.imgName
@@ -385,5 +391,121 @@ function deleteFolderRecursive(url, name) {
     })
   } else {
     console.log('给定的路径不存在！')
+  }
+}
+
+//blog
+
+//获取标签
+exports.getTagList = async (req, res) => {
+  let tagListData = await mongodb.findData(
+    'myblog',
+    'taggroups',
+    { deleted: false },
+    { create_time: -1 }
+  )
+  let data = tagListData.map((item) => {
+    return {
+      tagId: item._id,
+      tagName: item.tagName,
+    }
+  })
+  res.json(data)
+}
+//获取文章
+exports.getAllArchive = async (req, res) => {
+  let { tagId, startTime, endTime } = req.query
+  console.log(req.query)
+  let pageSize = req.query.pageSize ?? 10
+  if (req.query.currentPage == 0) {
+    ctx.body = {
+      code: 90000,
+      msg: '页码不能为0',
+    }
+    return
+  }
+  let currentPage = (req.query.currentPage - 1) * pageSize
+  let conditions = { deleted: false }
+  if (tagId) {
+    conditions.tagId = tagId
+  }
+  if (startTime !== '0' && endTime !== '0') {
+    conditions.archiveDate = {
+      $gte: Number(startTime),
+      $lt: Number(endTime),
+    }
+  }
+  let archiveData = await mongodb.pageing(
+    'myblog',
+    'archives',
+    conditions,
+    currentPage,
+    Number(pageSize),
+    { archiveDate: -1 }
+  )
+  let archiveDataRes = archiveData.res
+  let tagIdList = []
+  for (let i = 0; i < archiveDataRes.length; i++) {
+    tagIdList.push(ObjectId(archiveDataRes[i].tagId))
+  }
+  let tagData = await mongodb.findData(
+    'myblog',
+    'taggroups',
+    {
+      _id: { $in: tagIdList },
+      deleted: false,
+    },
+    {}
+  )
+  let data = archiveDataRes.map((item) => {
+    for (let i of tagData) {
+      if (item.tagId === String(i._id)) {
+        return {
+          date: item.archiveDate,
+          archiveId: String(item._id),
+          archiveTitle: item.archiveTitle,
+          archiveContent: item.archiveContent,
+          tagName: i.tagName,
+        }
+      }
+    }
+  })
+  res.json({
+    code: 200,
+    data: {
+      count: archiveData.total,
+      list: data,
+    },
+    msg: '',
+  })
+}
+
+exports.deleteArchive = async (req, res) => {
+  let archiveId = req.query.archiveId
+  let usertoken = req.headers['authorization']
+  let Auth = await selectAuth(usertoken)
+  if (!Auth) {
+    return res.json({
+      status: 403,
+      msg: '权限不足',
+    })
+  }
+  let result = await mongodb.updateOne(
+    'myblog',
+    'archives',
+    {
+      _id: archiveId,
+    },
+    {
+      $set: {
+        deleted: true,
+      },
+    }
+  )
+  if (result.modifiedCount === 1) {
+    res.json({
+      status: 200,
+      msg: '删除成功',
+    })
   }
 }
