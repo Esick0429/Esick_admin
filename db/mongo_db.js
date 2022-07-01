@@ -60,3 +60,12 @@ exports.updateOne = async function (database, tablename, data, set) {
   conn.close
   return res
 }
+
+
+exports.insertOne = async function (database, tablename, data) {
+  const conn = await connect();
+  const dbbase = conn.db(database);
+  let res = dbbase.collection(tablename).insertOne(data);
+  conn.close
+  return res
+}

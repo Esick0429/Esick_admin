@@ -40,6 +40,10 @@ router.delete('/api/deleteImgs', esick_admin.deleteImgs)
 router.get('/api/getTagList', esick_admin.getTagList)
 //获取文章
 router.get('/api/getAllArchive', esick_admin.getAllArchive)
+//新增文章
+router.post('/api/addArchive', esick_admin.addArchive)
+//修改文章
+router.post('/api/updateArchive', esick_admin.updateArchive)
 //删除文章
 router.delete('/api/deleteArchive', esick_admin.deleteArchive)
 module.exports = router

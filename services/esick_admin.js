@@ -465,6 +465,8 @@ exports.getAllArchive = async (req, res) => {
           archiveId: String(item._id),
           archiveTitle: item.archiveTitle,
           archiveContent: item.archiveContent,
+          updateTime: item.updateTime,
+          tagId: item.tagId,
           tagName: i.tagName,
         }
       }
@@ -473,11 +475,70 @@ exports.getAllArchive = async (req, res) => {
   res.json({
     code: 200,
     data: {
-      count: archiveData.total,
+      total: archiveData.total,
       list: data,
     },
     msg: '',
   })
+}
+
+exports.addArchive = async (req, res) => {
+  console.log(req.body)
+  let usertoken = req.headers['authorization']
+  let Auth = await selectAuth(usertoken)
+  if (!Auth) {
+    return res.json({
+      status: 403,
+      msg: '权限不足',
+    })
+  }
+  let data = {
+    ...req.body,
+    deleted: false,
+    archiveDate: new Date().getTime(),
+    createTime: new Date().getTime(),
+    updateTime: new Date().getTime(),
+  }
+  let result = await mongodb.insertOne('myblog', 'archives', data)
+  console.log(result)
+  res.json({ status: 200, msg: '新增成功' })
+}
+
+exports.updateArchive = async (req, res) => {
+  console.log(req.body)
+  let archiveId = ObjectId(req.body.archiveId)
+  let usertoken = req.headers['authorization']
+  let Auth = await selectAuth(usertoken)
+  if (!Auth) {
+    return res.json({
+      status: 403,
+      msg: '权限不足',
+    })
+  }
+  console.log(1)
+  let result = await mongodb.updateOne(
+    'myblog',
+    'archives',
+    {
+      _id: archiveId,
+    },
+    {
+      $set: {
+        archiveTitle: req.body.archiveTitle,
+        archiveContent: req.body.archiveContent,
+        tagId: req.body.tagId,
+        updateTime: new Date().getTime(),
+      },
+    }
+  )
+  console.log(result)
+
+  if (result.modifiedCount === 1) {
+    res.json({
+      status: 200,
+      msg: '修改成功',
+    })
+  }
 }
 
 exports.deleteArchive = async (req, res) => {
