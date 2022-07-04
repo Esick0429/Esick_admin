@@ -26,6 +26,7 @@ exports.login = (req, res) => {
           status: 200,
           msg: '登录成功',
           token: token,
+          authority:results[0].authority
         })
       }
       return res.json({
@@ -122,14 +123,14 @@ exports.delete = async (req, res) => {
 }
 //改用户
 exports.update = async (req, res) => {
-  let id = req.body.id
-  let username = req.body.username
-  let password = req.body.password
+  let { id, username, password, avatarUrl, authority } = req.body
   let update = 'update users set ? where id = ? and username  = ?'
   let updateMsg = [
     {
       username,
       password,
+      avatarUrl,
+      authority,
     },
     id,
     username,
@@ -299,7 +300,7 @@ let selectAuth = async function (usertoken) {
   let userInfo = await token.verToken(usertoken)
   if (userInfo) {
     let { results } = await db.base(sql, userInfo.username)
-    return results[0].username === 'admin' ? true : false
+    return results[0].authority
   }
 }
 //上传图片
@@ -515,7 +516,6 @@ exports.updateArchive = async (req, res) => {
       msg: '权限不足',
     })
   }
-  console.log(1)
   let result = await mongodb.updateOne(
     'myblog',
     'archives',
