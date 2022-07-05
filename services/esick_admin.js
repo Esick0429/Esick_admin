@@ -13,8 +13,10 @@ exports.login = (req, res) => {
   let password = req.body.password
   // 查询语句
   let sql = 'select * from users where username = ?'
+  let sql_route = 'select * from route_auth_info where authority = ?'
   token.setToken(username).then(async (token) => {
     let { results } = await db.base(sql, username)
+    let routeData = await db.base(sql_route, results[0].authority)
     if (!results.length) {
       return res.json({
         status: 403,
@@ -26,7 +28,8 @@ exports.login = (req, res) => {
           status: 200,
           msg: '登录成功',
           token: token,
-          authority:results[0].authority
+          authority: results[0].authority,
+          routeConfig: routeData.results[0].route_config,
         })
       }
       return res.json({
