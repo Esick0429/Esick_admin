@@ -37,8 +37,8 @@ exports.pageing = async function (database, tablename, data, skip, limit, sort) 
   let total = await dbbase
     .collection(tablename)
     .find(data)
-    .skip(skip)
-    .limit(limit)
+    // .skip(skip)
+    // .limit(limit)
     .sort(sort)
     .count()
   let res = await dbbase

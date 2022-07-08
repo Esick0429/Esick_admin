@@ -97,7 +97,11 @@ exports.getUserInfo = async (req, res) => {
   }
   let userInfo = await token.verToken(usertoken)
   let { results } = await db.base(sql, userInfo.username)
-  res.json(results[0])
+  res.json({
+    status: 200,
+    msg: '获取成功',
+    data: results[0],
+  })
 }
 //删用户
 exports.delete = async (req, res) => {
@@ -178,7 +182,7 @@ exports.selectDiary = async (req, res) => {
   let diaryCount = await db.base(sqlcount)
   let { results } = await db.base(sql)
   if (results) {
-    let data = results.map((item) => ({
+    let list = results.map((item) => ({
       id: item.id,
       date: item.date,
       title: item.title,
@@ -188,8 +192,8 @@ exports.selectDiary = async (req, res) => {
     }))
     res.json({
       status: 200,
-      total: diaryCount.results[0].count,
-      data,
+      msg: '',
+      data: { total: diaryCount.results[0].count, list },
     })
   } else {
     res.json({
@@ -336,6 +340,16 @@ exports.uploadImg = async (req, res) => {
     res.json({
       status: 200,
       msg: '上传成功',
+      errno: 0,
+      data: {
+        url: `http://${req.headers.host}/images/${req.file.filename}`,
+      },
+    })
+  } else {
+    res.json({
+      status: 500,
+      msg: '上传失败',
+      errno: 1,
     })
   }
 }
@@ -344,7 +358,7 @@ exports.getImgs = async (req, res) => {
   const selectImgs = `select * from gallery order by upload_time Desc`
   let { results } = await db.base(selectImgs)
   for (let i of results) {
-    i.imgUrl = `https://${req.headers.host}${i.imgUrl}`
+    i.imgUrl = `http://${req.headers.host}${i.imgUrl}`
   }
   res.json({
     status: 200,
@@ -414,7 +428,11 @@ exports.getTagList = async (req, res) => {
       tagName: item.tagName,
     }
   })
-  res.json(data)
+  res.json({
+    status: 200,
+    data: data,
+    msg: '',
+  })
 }
 //获取文章
 exports.getAllArchive = async (req, res) => {
@@ -423,7 +441,7 @@ exports.getAllArchive = async (req, res) => {
   let pageSize = req.query.pageSize ?? 10
   if (req.query.currentPage == 0) {
     ctx.body = {
-      code: 90000,
+      status: 90000,
       msg: '页码不能为0',
     }
     return
@@ -477,7 +495,7 @@ exports.getAllArchive = async (req, res) => {
     }
   })
   res.json({
-    code: 200,
+    status: 200,
     data: {
       total: archiveData.total,
       list: data,
