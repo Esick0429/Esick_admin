@@ -38,6 +38,10 @@ router.delete('/api/deleteImgs', esick_admin.deleteImgs)
 //blog
 //获取标签
 router.get('/api/getTagList', esick_admin.getTagList)
+//获取标签
+router.post('/api/addTags', esick_admin.addTags)
+//获取标签
+router.delete('/api/deleteTags', esick_admin.deleteTags)
 //获取文章
 router.get('/api/getAllArchive', esick_admin.getAllArchive)
 //新增文章

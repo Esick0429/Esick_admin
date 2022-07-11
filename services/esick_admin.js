@@ -434,6 +434,57 @@ exports.getTagList = async (req, res) => {
     msg: '',
   })
 }
+//新增标签TODO:
+exports.addTags = async (req, res) => {
+  console.log(req.body)
+  let usertoken = req.headers['authorization']
+  let Auth = await selectAuth(usertoken)
+  if (!Auth) {
+    return res.json({
+      status: 403,
+      msg: '权限不足',
+    })
+  }
+  let data = {
+    ...req.body,
+    deleted: false,
+    createTime: new Date().getTime(),
+    updateTime: new Date().getTime(),
+  }
+  let result = await mongodb.insertOne('myblog', 'taggroups', data)
+  res.json({ status: 200, msg: '新增成功' })
+}
+//删除标签TODO:
+exports.deleteTags = async (req, res) => {
+  let tagId = req.query.tagId
+  let usertoken = req.headers['authorization']
+  let Auth = await selectAuth(usertoken)
+  if (!Auth) {
+    return res.json({
+      status: 403,
+      msg: '权限不足',
+    })
+  }
+  let result = await mongodb.updateOne(
+    'myblog',
+    'taggroups',
+    {
+      _id: tagId,
+    },
+    {
+      $set: {
+        deleted: true,
+      },
+    }
+  )
+  if (result.modifiedCount === 1) {
+    res.json({
+      status: 200,
+      msg: '删除成功',
+    })
+  }
+}
+
 //获取文章
 exports.getAllArchive = async (req, res) => {
   let { tagId, startTime, endTime } = req.query
@@ -503,7 +554,7 @@ exports.getAllArchive = async (req, res) => {
     msg: '',
   })
 }
-
+//新增文章
 exports.addArchive = async (req, res) => {
   console.log(req.body)
   let usertoken = req.headers['authorization']
@@ -525,7 +576,7 @@ exports.addArchive = async (req, res) => {
   console.log(result)
   res.json({ status: 200, msg: '新增成功' })
 }
-
+//更新文章
 exports.updateArchive = async (req, res) => {
   console.log(req.body)
   let archiveId = ObjectId(req.body.archiveId)
@@ -561,7 +612,7 @@ exports.updateArchive = async (req, res) => {
     })
   }
 }
-
+//删除文章
 exports.deleteArchive = async (req, res) => {
   let archiveId = req.query.archiveId
   let usertoken = req.headers['authorization']
