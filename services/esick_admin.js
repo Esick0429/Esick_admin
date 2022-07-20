@@ -457,6 +457,7 @@ exports.addTags = async (req, res) => {
 //删除标签TODO:
 exports.deleteTags = async (req, res) => {
   let tagId = req.query.tagId
+  console.log(tagId);
   let usertoken = req.headers['authorization']
   let Auth = await selectAuth(usertoken)
   if (!Auth) {
@@ -469,7 +470,7 @@ exports.deleteTags = async (req, res) => {
     'myblog',
     'taggroups',
     {
-      _id: tagId,
+      _id: ObjectId(tagId),
     },
     {
       $set: {
