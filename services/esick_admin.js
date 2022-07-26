@@ -84,7 +84,9 @@ exports.select = async (req, res) => {
   let userList = await db.base(sql)
   if (userList) {
     res.json({
-      list: userList.results,
+      status: 200,
+      msg: '获取成功',
+      data: userList.results,
     })
   }
 }
